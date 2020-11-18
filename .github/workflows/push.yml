@@ -1,0 +1,38 @@
+on:
+  push:
+    branches:
+      - master
+name: build and publish
+jobs:
+  build-and-publish:
+    name: build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+      - run: npm ci
+      - run: npm run eslint
+      - run: npm run stylelint
+      - run: npm run svelte:check
+      - run: npm run fontello
+      - run: cp template.env .env
+      - run: npm run build
+      - run: npm run test:headless:prod
+      - name: set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: login to DockerHub
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: docker build and push
+        uses: docker/build-push-action@v2
+        with:
+          tags: 9e3u2f0b1/sent-template:latest
+          file: ./docker/nodejs/Dockerfile
+          push: true
+          context: .
+      - name: image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
